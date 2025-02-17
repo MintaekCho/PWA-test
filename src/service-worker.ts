@@ -1,11 +1,8 @@
 /// <reference lib="webworker" />
 
-import { getMessaging, onMessage } from 'firebase/messaging';
 import { clientsClaim } from 'workbox-core';
-import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
 import { registerRoute } from 'workbox-routing';
-import { StaleWhileRevalidate } from 'workbox-strategies';
 
 declare const self: ServiceWorkerGlobalScope;
 
@@ -28,18 +25,17 @@ registerRoute(({ request, url }: { request: Request; url: URL }) => {
     return true;
 }, createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html'));
 
-const messaging = getMessaging();
 
 // 포그라운드 메시지 핸들러
-onMessage(messaging, (payload) => {
-    console.log('Received foreground message:', payload);
-    // 여기서 알림을 직접 표시하거나 UI를 업데이트
-    if (!payload.notification) {
-        return;
-    }
-    new Notification(payload.notification.title || 'No title', {
-        body: payload.notification.body || 'No body',
+self.addEventListener('push', (event: PushEvent) => {
+    console.log('Received push message:', event);
+    const title = '알림 테스트';
+    const options = {
+        body: event.data?.text(),
         icon: '/logo192.png',
         badge: '/smartTSLogo.png',
-    });
+    };
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
 });
