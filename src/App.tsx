@@ -3,6 +3,8 @@ import { Camera, Bell, Wifi, WifiOff, Award } from 'lucide-react';
 import QRScanner from './components/QRScanner';
 import { getFCMToken } from './firebase';
 
+const APP_VERSION = '1.0.0'; // 버전 정보 추가
+
 const App = () => {
     const [currentSection, setCurrentSection] = useState('home');
     const [isOnline, setIsOnline] = useState(navigator.onLine);
@@ -23,7 +25,6 @@ const App = () => {
         };
     }, []);
 
-    // 프론트에서 사용자에게 알림 권한 요청
     const requestNotification = async () => {
         setNotificationStatus('requesting');
         try {
@@ -39,41 +40,46 @@ const App = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-800 text-white p-4">
             {/* 상태바 */}
-            <div className="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur p-2 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    {isOnline ? (
-                        <Wifi className="w-4 h-4 text-green-400" />
-                    ) : (
-                        <WifiOff className="w-4 h-4 text-red-400" />
-                    )}
-                    <span className="text-sm">{isOnline ? 'Online' : 'Offline'}</span>
+            <div className="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur p-2 flex flex-col gap-2">
+                <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-2">
+                        {isOnline ? (
+                            <Wifi className="w-4 h-4 text-green-400" />
+                        ) : (
+                            <WifiOff className="w-4 h-4 text-red-400" />
+                        )}
+                        <span className="text-sm">{isOnline ? 'Online' : 'Offline'}</span>
+                        <span className="text-xs text-gray-400 ml-2">v{APP_VERSION}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Bell className="w-4 h-4" />
+                        <span className="text-sm">{notificationStatus}</span>
+                    </div>
                 </div>
-                <div className="flex items-center gap-2">
-                    <Bell className="w-4 h-4" />
-                    <span className="text-sm">{notificationStatus}</span>
-                </div>
+
+                {/* 디바이스 토큰 표시 영역 */}
+                {deviceToken && (
+                    <div className="flex items-center gap-2 bg-black/20 p-2 rounded">
+                        <input
+                            type="text"
+                            value={deviceToken}
+                            readOnly
+                            className="flex-1 bg-transparent text-xs overflow-hidden text-ellipsis"
+                        />
+                        <button
+                            onClick={() => {
+                                navigator.clipboard.writeText(deviceToken);
+                                alert('Token copied to clipboard!');
+                            }}
+                            className="px-2 py-1 bg-purple-600 text-xs rounded hover:bg-purple-700 transition-colors"
+                        >
+                            Copy Token
+                        </button>
+                    </div>
+                )}
             </div>
-            {/* 디바이스 토큰 표시 영역 */}
-            {deviceToken && (
-                <div className="mt-2 flex items-center gap-2 bg-black/20 p-2 rounded">
-                    <input
-                        type="text"
-                        value={deviceToken}
-                        readOnly
-                        className="flex-1 bg-transparent text-xs overflow-hidden text-ellipsis"
-                    />
-                    <button
-                        onClick={() => {
-                            navigator.clipboard.writeText(deviceToken);
-                            alert('Token copied to clipboard!');
-                        }}
-                        className="px-2 py-1 bg-purple-600 text-xs rounded hover:bg-purple-700 transition-colors"
-                    >
-                        Copy Token
-                    </button>
-                </div>
-            )}
-            <div className="max-w-4xl mx-auto pt-16">
+
+            <div className={`max-w-4xl mx-auto ${deviceToken ? 'pt-28' : 'pt-16'}`}>
                 {/* 헤더 */}
                 <div className="text-center mb-12">
                     <h1 className="text-5xl font-bold mb-4 animate-pulse bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-pink-600">

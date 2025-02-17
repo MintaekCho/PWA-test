@@ -44,14 +44,14 @@ self.addEventListener('activate', (event) => {
 //     event.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
 // });
 
-// messaging.onBackgroundMessage((payload) => {
-//     console.log('Received background message:', payload);
+messaging.onBackgroundMessage((payload) => {
+    console.log('Received background message:', payload);
 
-//     const notificationTitle = payload.notification.title;
-//     const notificationOptions = {
-//         body: payload.notification.body,
-//         icon: '/logo192.png',
-//     };
+    const notificationTitle = payload.notification.title;
+    const notificationOptions = {
+        body: payload.notification.body,
+        icon: '/logo192.png',
+    };
 
-//     self.registration.showNotification(notificationTitle, notificationOptions);
-// });
+    self.registration.showNotification(notificationTitle, notificationOptions);
+});
