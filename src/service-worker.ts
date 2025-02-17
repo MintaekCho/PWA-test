@@ -28,16 +28,16 @@ registerRoute(({ request, url }: { request: Request; url: URL }) => {
 }, createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html'));
 
 // 푸시 알림 처리
-// self.addEventListener('push', (event) => {
-//     const data = event.data?.json() ?? {};
+self.addEventListener('push', (event) => {
+    const data = event.data?.json() ?? {};
 
-//     event.waitUntil(
-//         self.registration.showNotification(data.title ?? 'New Message', {
-//             body: data.body ?? 'You have a new message',
-//             icon: '/smartTSLogo.png',
-//             badge: '/smartTSLogo.png',
-//         })
-//     );
-// });
+    event.waitUntil(
+        self.registration.showNotification(data.title ?? 'New Message', {
+            body: data.body ?? 'You have a new message',
+            icon: '/smartTSLogo.png',
+            badge: '/smartTSLogo.png',
+        })
+    );
+});
 
 
