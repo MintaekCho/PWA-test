@@ -14,39 +14,34 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // 싱글 페이지 앱을 위한 설정
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
-registerRoute(
-  ({ request, url }: { request: Request; url: URL }) => {
+registerRoute(({ request, url }: { request: Request; url: URL }) => {
     if (request.mode !== 'navigate') {
-      return false;
+        return false;
     }
     if (url.pathname.startsWith('/_')) {
-      return false;
+        return false;
     }
     if (url.pathname.match(fileExtensionRegexp)) {
-      return false;
+        return false;
     }
     return true;
-  },
-  createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html')
-);
+}, createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html'));
 
 // 푸시 알림 처리
 self.addEventListener('push', (event) => {
-  const data = event.data?.json() ?? {};
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title ?? 'New Message', {
-      body: data.body ?? 'You have a new message',
-      icon: '/logo192.png',
-      badge: '/logo192.png'
-    })
-  );
+    const data = event.data?.json() ?? {};
+
+    event.waitUntil(
+        self.registration.showNotification(data.title ?? 'New Message', {
+            body: data.body ?? 'You have a new message',
+            icon: '/smartTSLogo.png',
+            badge: '/smartTSLogo.png',
+        })
+    );
 });
 
 // 알림 클릭 처리
 self.addEventListener('notificationclick', (event) => {
-  event.notification.close();
-  event.waitUntil(
-    self.clients.openWindow('/')
-  );
+    event.notification.close();
+    event.waitUntil(self.clients.openWindow('/'));
 });
