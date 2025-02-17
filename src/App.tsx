@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Camera, Bell, Wifi, WifiOff, Award } from 'lucide-react';
 import QRScanner from './components/QRScanner';
+import { getFCMToken } from './firebase';
 
 const App = () => {
   const [currentSection, setCurrentSection] = useState('home');
@@ -21,10 +22,13 @@ const App = () => {
     };
   }, []);
 
+  // 프론트에서 사용자에게 알림 권한 요청
   const requestNotification = async () => {
     setNotificationStatus('requesting');
     try {
       const permission = await Notification.requestPermission();
+      const deviceToken = await getFCMToken();
+      alert(`FCM Token: ${deviceToken}`);
       setNotificationStatus(permission);
     } catch (error) {
       setNotificationStatus('denied');
