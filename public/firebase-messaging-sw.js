@@ -26,23 +26,23 @@ self.addEventListener('activate', (event) => {
 });
 
 // 푸시 이벤트 추가
-// self.addEventListener('push', function (event) {
-//     console.log('Push event received:', event);
+self.addEventListener('push', function (event) {
+    console.log('Push event received:', event);
 
-//     if (!event.data) return;
+    if (!event.data) return;
 
-//     const data = event.data.json();
-//     console.log('Push data:', data);
+    const data = event.data.json();
+    console.log('Push data:', data);
 
-//     const notificationTitle = data.notification.title;
-//     const notificationOptions = {
-//         body: data.notification.body,
-//         icon: '/logo192.png',
-//         badge: '/logo192.png',
-//     };
+    const notificationTitle = data.notification.title;
+    const notificationOptions = {
+        body: data.notification.body,
+        icon: '/logo192.png',
+        badge: '/logo192.png',
+    };
 
-//     event.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
-// });
+    event.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
+});
 
 messaging.onBackgroundMessage((payload) => {
     console.log('Received background message:', payload);
@@ -51,7 +51,14 @@ messaging.onBackgroundMessage((payload) => {
     const notificationOptions = {
         body: payload.notification.body,
         icon: '/logo192.png',
+        badge: '/smartTSLogo.png',
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+self.addEventListener('notificationclick', function (event) {
+    console.log('Notification click received.');
+    event.waitUntil(self.clients.openWindow('/'));
+    event.notification.close();
 });

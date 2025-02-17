@@ -40,8 +40,4 @@ registerRoute(({ request, url }: { request: Request; url: URL }) => {
 //     );
 // });
 
-// 알림 클릭 처리
-self.addEventListener('notificationclick', (event) => {
-    event.notification.close();
-    event.waitUntil(self.clients.openWindow('/'));
-});
+

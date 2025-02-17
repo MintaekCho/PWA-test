@@ -3,7 +3,7 @@ import { Camera, Bell, Wifi, WifiOff, Award } from 'lucide-react';
 import QRScanner from './components/QRScanner';
 import { getFCMToken } from './firebase';
 
-const APP_VERSION = '1.0.0'; // 버전 정보 추가
+const APP_VERSION = '1.0.1'; // 버전 정보 추가
 
 const App = () => {
     const [currentSection, setCurrentSection] = useState('home');
