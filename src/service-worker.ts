@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 
+import { getMessaging, onMessage } from 'firebase/messaging';
 import { clientsClaim } from 'workbox-core';
 import { ExpirationPlugin } from 'workbox-expiration';
 import { precacheAndRoute, createHandlerBoundToURL } from 'workbox-precaching';
@@ -27,17 +28,18 @@ registerRoute(({ request, url }: { request: Request; url: URL }) => {
     return true;
 }, createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html'));
 
-// 푸시 알림 처리
-self.addEventListener('push', (event) => {
-    const data = event.data?.json() ?? {};
+const messaging = getMessaging();
 
-    event.waitUntil(
-        self.registration.showNotification(data.title ?? 'New Message', {
-            body: data.body ?? 'You have a new message',
-            icon: '/smartTSLogo.png',
-            badge: '/smartTSLogo.png',
-        })
-    );
+// 포그라운드 메시지 핸들러
+onMessage(messaging, (payload) => {
+    console.log('Received foreground message:', payload);
+    // 여기서 알림을 직접 표시하거나 UI를 업데이트
+    if (!payload.notification) {
+        return;
+    }
+    new Notification(payload.notification.title || 'No title', {
+        body: payload.notification.body || 'No body',
+        icon: '/logo192.png',
+        badge: '/smartTSLogo.png',
+    });
 });
-
-
