@@ -5,7 +5,7 @@ import { getFCMToken } from './firebase';
 import { getMessaging, onMessage } from 'firebase/messaging';
 
 // 앱 버전 정보
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 
 const App = () => {
     // 상태값 정의
@@ -46,8 +46,6 @@ const App = () => {
         const messaging = getMessaging();
         const unsubscribe = onMessage(messaging, (payload) => {
             console.log('Received foreground message:', payload);
-            alert(payload.notification?.title)
-            if(!payload.notification) return;
 
             // PWA 설치 상태 확인
             const isPWA = window.matchMedia('(display-mode: standalone)').matches;
@@ -55,16 +53,23 @@ const App = () => {
 
             // 알림 권한이 허용된 경우 직접 알림 생성
             if (Notification.permission === 'granted') {
-                // 새로운 알림 생성
-                new Notification(payload.notification.title ?? '', {
-                    body: payload.notification.body ?? '',
-                    icon: '/logo192.png'
-                });
+                try {
+                    const notification = payload.notification || {};
+                    const { title = 'Default Title', body = 'Default Body' } = notification;
+                    navigator.serviceWorker.ready.then((registration) => {
+                        registration.showNotification(title, {
+                            body: body,
+                            icon: '/logo192.png',
+                        });
+                    });
+                } catch (error) {
+                    console.error('서비스워커 알림 생성 실패:', error);
+                }
             }
         });
 
         return () => unsubscribe();
-    }, []);
+    }, [notificationSupported]);
 
     // 알림 권한 요청 및 FCM 토큰 발급 함수
     const requestNotification = async () => {
