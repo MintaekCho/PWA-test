@@ -38,14 +38,6 @@ messaging.onBackgroundMessage((payload) => {
     self.registration.showNotification(notificationTitle, notificationOptions);
 });
 
-messaging.onMessage((payload) => {
-    console.log('Received foreground message:', payload);
-    self.registration.showNotification(payload.notification.title, {
-        body: payload.notification.body,
-        icon: '/smartTSLogo.png'
-    });
-});
-
 self.addEventListener('notificationclick', function (event) {
     console.log('Notification click received.');
     event.waitUntil(self.clients.openWindow('/'));

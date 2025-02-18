@@ -37,27 +37,31 @@ const App = () => {
     }, []);
 
     useEffect(() => {
-        // 알림 권한이 허용된 경우에만 메시지 핸들러 등록
-        if (notificationStatus === 'granted') {
-            const messaging = getMessaging();
+        const messaging = getMessaging();
 
-            // 포그라운드 메시지 핸들러 등록
-            const unsubscribe = onMessage(messaging, (payload) => {
-                console.log('Received foreground message:', payload);
+        const unsubscribe = onMessage(messaging, (payload) => {
+            console.log('Received foreground message:', payload);
 
-                // 포그라운드에서도 알림 표시
+            // PWA에서 설치된 상태인지 확인
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+            console.log('Is PWA:', isPWA);
+
+            // 알림 권한 확인
+            if (Notification.permission === 'granted') {
                 if (payload.notification) {
+                    console.log('foreground message check')
+                    // 새로운 알림 생성
                     new Notification(payload.notification.title ?? '-', {
                         body: payload.notification.body ?? '-',
                         icon: '/smartTSLogo.png',
                     });
                 }
-            });
+            }
+        });
 
-            // 컴포넌트 언마운트 시 구독 해제
-            return () => unsubscribe();
-        }
-    }, [notificationStatus]);
+        // 컴포넌트 언마운트 시 구독 해제
+        return () => unsubscribe();
+    }, []);
 
     const requestNotification = async () => {
         if (!notificationSupported) {
