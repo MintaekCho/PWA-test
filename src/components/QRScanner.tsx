@@ -20,7 +20,7 @@ const QRScanner = () => {
         try {
             // 카메라 접근 권한 요청 (권한은 한번 받으면 브라우저에 저장)
             const stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user' },
+                video: { facingMode: ['environment', 'user'] },
             });
 
             console.log(stream)
