@@ -38,18 +38,56 @@ self.addEventListener('activate', (event) => {
 //     self.registration.showNotification(notificationTitle, notificationOptions);
 // });
 
-self.addEventListener("push", function (e) {
-    if (!e.data.json()) return;
-    const resultData = e.data.json().notification;
-    const notificationTitle = resultData.title;
+// self.addEventListener("push", function (e) {
+//     if (!e.data.json()) return;
+//     const resultData = e.data.json().notification;
+//     const notificationTitle = resultData.title;
+//     const notificationOptions = {
+//       body: resultData.body,
+//       vibrate: [200, 100, 200], // 진동 패턴
+//       tag: 'notification-tag',   // 알림 그룹화
+//       renotify: true,           // 같은 tag여도 다시 알림
+//       silent: false,            // 소리 허용
+//       requireInteraction: true, // 사용자가 직접 닫을 때까지 유지
+//       actions: [                // 알림 액션 버튼
+//           {
+//               action: 'open',
+//               title: '열기'
+//           }
+//       ]
+
+//     };
+//     console.log(resultData.title, {
+//       body: resultData.body,
+//     });
+//     e.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
+//   });
+
+messaging.onBackgroundMessage((payload) => {
+    console.log('Received background message:', payload);
+
+    const notificationTitle = payload.notification.title;
     const notificationOptions = {
-      body: resultData.body,
+        body: payload.notification.body,
+        icon: '/logo192.png',
+        badge: '/smartTSLogo.png',
+        // 추가 옵션들
+        vibrate: [200, 100, 200], // 진동 패턴
+        tag: 'notification-tag', // 알림 그룹화
+        renotify: true, // 같은 tag여도 다시 알림
+        silent: false, // 소리 허용
+        requireInteraction: true, // 사용자가 직접 닫을 때까지 유지
+        actions: [
+            // 알림 액션 버튼
+            {
+                action: 'open',
+                title: '열기',
+            },
+        ],
     };
-    console.log(resultData.title, {
-      body: resultData.body,
-    });
-    e.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
-  });
+
+    self.registration.showNotification(notificationTitle, notificationOptions);
+});
 
 self.addEventListener('notificationclick', function (event) {
     console.log('Notification click received.');
