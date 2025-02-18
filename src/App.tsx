@@ -4,7 +4,9 @@ import QRScanner from './components/QRScanner';
 import { getFCMToken } from './firebase';
 import { getMessaging, onMessage } from 'firebase/messaging';
 
-const APP_VERSION = '1.0.3';
+declare var self: ServiceWorkerGlobalScope;
+
+const APP_VERSION = '1.0.4';
 
 const App = () => {
     const [currentSection, setCurrentSection] = useState('home');
@@ -49,14 +51,18 @@ const App = () => {
 
             // 알림 권한 확인
             if (Notification.permission === 'granted') {
-                if (payload.notification) {
-                    console.log('foreground message check')
-                    // 새로운 알림 생성
-                    new Notification(payload.notification.title ?? '-', {
-                        body: payload.notification.body ?? '-',
-                        icon: '/smartTSLogo.png',
+                self.addEventListener("push", function (e: PushEvent) {
+                    if (!e?.data?.json()) return;
+                    const resultData = e.data.json().notification;
+                    const notificationTitle = resultData.title;
+                    const notificationOptions = {
+                      body: resultData.body,
+                    };
+                    console.log(resultData.title, {
+                      body: resultData.body,
                     });
-                }
+                    e.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
+                  });
             }
         });
 
