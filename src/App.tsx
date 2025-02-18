@@ -4,18 +4,19 @@ import QRScanner from './components/QRScanner';
 import { getFCMToken } from './firebase';
 import { getMessaging, onMessage } from 'firebase/messaging';
 
-declare var self: ServiceWorkerGlobalScope;
-
-const APP_VERSION = '1.0.4';
+// 앱 버전 정보
+const APP_VERSION = '1.0.5';
 
 const App = () => {
-    const [currentSection, setCurrentSection] = useState('home');
-    const [isOnline, setIsOnline] = useState(navigator.onLine);
-    const [notificationStatus, setNotificationStatus] = useState('pending');
-    const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
-    const [deviceToken, setDeviceToken] = useState<string>('');
-    const [notificationSupported, setNotificationSupported] = useState(false);
+    // 상태값 정의
+    const [currentSection, setCurrentSection] = useState('home'); // 현재 보여지는 섹션 (home/camera)
+    const [isOnline, setIsOnline] = useState(navigator.onLine); // 온라인 상태
+    const [notificationStatus, setNotificationStatus] = useState('pending'); // 알림 권한 상태 (pending/granted/denied)
+    const [showFeatureHighlight, setShowFeatureHighlight] = useState(false); // 기능 하이라이트 모달 표시 여부
+    const [deviceToken, setDeviceToken] = useState<string>(''); // FCM 디바이스 토큰
+    const [notificationSupported, setNotificationSupported] = useState(false); // 브라우저의 알림 지원 여부
 
+    // 온라인/오프라인 상태 감지를 위한 이벤트 리스너 설정
     useEffect(() => {
         const handleOnline = () => setIsOnline(true);
         const handleOffline = () => setIsOnline(false);
@@ -23,12 +24,14 @@ const App = () => {
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
 
+        // 컴포넌트 언마운트 시 이벤트 리스너 제거
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
         };
     }, []);
 
+    // 브라우저의 알림 지원 여부 확인 및 현재 알림 권한 상태 설정
     useEffect(() => {
         const isSupported = 'Notification' in window;
         setNotificationSupported(isSupported);
@@ -38,44 +41,40 @@ const App = () => {
         }
     }, []);
 
+    // 포그라운드 메시지 수신 처리
     useEffect(() => {
         const messaging = getMessaging();
-
+    
         const unsubscribe = onMessage(messaging, (payload) => {
             console.log('Received foreground message:', payload);
-
-            // PWA에서 설치된 상태인지 확인
+            if(!payload.notification) return;
+    
+            // PWA 설치 상태 확인
             const isPWA = window.matchMedia('(display-mode: standalone)').matches;
             console.log('Is PWA:', isPWA);
-            alert(`Is PWA: ${isPWA} / Notification permission: ${Notification.permission}`);
-
-            // 알림 권한 확인
+    
+            // 알림 권한이 허용된 경우 직접 알림 생성
             if (Notification.permission === 'granted') {
-                self.addEventListener("push", function (e: PushEvent) {
-                    if (!e?.data?.json()) return;
-                    const resultData = e.data.json().notification;
-                    const notificationTitle = resultData.title;
-                    const notificationOptions = {
-                      body: resultData.body,
-                    };
-                    console.log(resultData.title, {
-                      body: resultData.body,
-                    });
-                    e.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
-                  });
+                // 새로운 알림 생성
+                new Notification(payload.notification.title ?? '', {
+                    body: payload.notification.body ?? '',
+                    icon: '/logo192.png'
+                });
             }
         });
-
-        // 컴포넌트 언마운트 시 구독 해제
+    
         return () => unsubscribe();
     }, []);
 
+    // 알림 권한 요청 및 FCM 토큰 발급 함수
     const requestNotification = async () => {
+        // 브라우저가 알림을 지원하지 않는 경우
         if (!notificationSupported) {
             alert('이 브라우저는 알림을 지원하지 않습니다.');
             return;
         }
 
+        // 이미 알림이 거부된 경우
         if (notificationStatus === 'denied') {
             alert('브라우저 설정에서 알림 권한을 허용해주세요.');
             return;
@@ -83,11 +82,13 @@ const App = () => {
 
         setNotificationStatus('requesting');
         try {
+            // 알림 권한 요청
             const permission = await Notification.requestPermission();
             setNotificationStatus(permission);
 
             if (permission === 'granted') {
                 try {
+                    // FCM 토큰 발급 요청
                     const token = await getFCMToken();
                     if (token) {
                         setDeviceToken(token);
@@ -108,9 +109,10 @@ const App = () => {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-gray-900 via-purple-900 to-violet-800 text-white p-4">
-            {/* 상태바 */}
+            {/* 상태바 - 온라인 상태, 알림 상태, 버전 정보 표시 */}
             <div className="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur p-2 flex flex-col gap-2">
                 <div className="flex justify-between items-center">
+                    {/* 온라인 상태 표시 */}
                     <div className="flex items-center gap-2">
                         {isOnline ? (
                             <Wifi className="w-4 h-4 text-green-400" />
@@ -120,13 +122,14 @@ const App = () => {
                         <span className="text-sm">{isOnline ? 'Online' : 'Offline'}</span>
                         <span className="text-xs text-gray-400 ml-2">v{APP_VERSION}</span>
                     </div>
+                    {/* 알림 상태 표시 */}
                     <div className="flex items-center gap-2">
                         <Bell className={`w-4 h-4 ${notificationSupported ? 'text-green-400' : 'text-red-400'}`} />
                         <span className="text-sm">{notificationSupported ? notificationStatus : 'Not Supported'}</span>
                     </div>
                 </div>
 
-                {/* 디바이스 토큰 표시 영역 */}
+                {/* FCM 디바이스 토큰 표시 영역 */}
                 {deviceToken && (
                     <div className="flex items-center gap-2 bg-black/20 p-2 rounded">
                         <input
@@ -148,6 +151,7 @@ const App = () => {
                 )}
             </div>
 
+            {/* 메인 컨텐츠 영역 */}
             <div className={`max-w-4xl mx-auto ${deviceToken ? 'pt-28' : 'pt-16'}`}>
                 {/* 헤더 */}
                 <div className="text-center mb-12">
@@ -157,8 +161,9 @@ const App = () => {
                     <p className="text-lg text-gray-300 opacity-75">Discover the power of modern web</p>
                 </div>
 
-                {/* 기능 카드 */}
+                {/* 기능 카드 영역 - QR 스캐너와 알림 설정 */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    {/* QR 스캐너 카드 */}
                     <div
                         className="group bg-black/30 backdrop-blur p-6 rounded-lg hover:bg-black/40 transition-all duration-300 cursor-pointer"
                         onClick={() => setCurrentSection('camera')}
@@ -174,6 +179,7 @@ const App = () => {
                         </div>
                     </div>
 
+                    {/* 알림 설정 카드 */}
                     <div
                         className={`group bg-black/30 backdrop-blur p-6 rounded-lg hover:bg-black/40 transition-all duration-300 ${
                             notificationSupported ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
@@ -196,7 +202,7 @@ const App = () => {
                     </div>
                 </div>
 
-                {/* 메인 컨텐츠 */}
+                {/* QR 스캐너 섹션 */}
                 <div className="relative">
                     {currentSection === 'camera' && (
                         <div className="bg-black/30 backdrop-blur rounded-lg overflow-hidden">
@@ -215,7 +221,7 @@ const App = () => {
                     )}
                 </div>
 
-                {/* 플로팅 버튼 */}
+                {/* 플로팅 버튼 - 기능 하이라이트 모달 토글 */}
                 <button
                     className="fixed bottom-6 right-6 w-12 h-12 rounded-full bg-gradient-to-r from-purple-600 to-pink-600 flex items-center justify-center hover:scale-110 transition-transform"
                     onClick={() => setShowFeatureHighlight(!showFeatureHighlight)}
