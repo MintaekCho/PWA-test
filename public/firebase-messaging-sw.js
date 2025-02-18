@@ -25,18 +25,31 @@ self.addEventListener('activate', (event) => {
     console.log('Service Worker activating.');
 });
 
-messaging.onBackgroundMessage((payload) => {
-    console.log('Received background message:', payload);
+// messaging.onBackgroundMessage((payload) => {
+//     console.log('Received background message:', payload);
 
-    const notificationTitle = payload.notification.title;
+//     const notificationTitle = payload.notification.title;
+//     const notificationOptions = {
+//         body: payload.notification.body,
+//         icon: '/logo192.png',
+//         badge: '/smartTSLogo.png',
+//     };
+
+//     self.registration.showNotification(notificationTitle, notificationOptions);
+// });
+
+self.addEventListener("push", function (e) {
+    if (!e.data.json()) return;
+    const resultData = e.data.json().notification;
+    const notificationTitle = resultData.title;
     const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/logo192.png',
-        badge: '/smartTSLogo.png',
+      body: resultData.body,
     };
-
-    self.registration.showNotification(notificationTitle, notificationOptions);
-});
+    console.log(resultData.title, {
+      body: resultData.body,
+    });
+    e.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
+  });
 
 self.addEventListener('notificationclick', function (event) {
     console.log('Notification click received.');

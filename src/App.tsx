@@ -4,7 +4,7 @@ import QRScanner from './components/QRScanner';
 import { getFCMToken } from './firebase';
 import { getMessaging, onMessage } from 'firebase/messaging';
 
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 const App = () => {
     const [currentSection, setCurrentSection] = useState('home');
@@ -45,6 +45,7 @@ const App = () => {
             // PWA에서 설치된 상태인지 확인
             const isPWA = window.matchMedia('(display-mode: standalone)').matches;
             console.log('Is PWA:', isPWA);
+            alert(`Is PWA: ${isPWA} / Notification permission: ${Notification.permission}`);
 
             // 알림 권한 확인
             if (Notification.permission === 'granted') {
