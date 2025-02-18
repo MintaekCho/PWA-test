@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Camera, Bell, Wifi, WifiOff, Award } from 'lucide-react';
 import QRScanner from './components/QRScanner';
 import { getFCMToken } from './firebase';
+import { getMessaging, onMessage } from 'firebase/messaging';
 
-const APP_VERSION = '1.0.2'; // 버전 정보 추가
+const APP_VERSION = '1.0.2';
 
 const App = () => {
     const [currentSection, setCurrentSection] = useState('home');
@@ -11,6 +12,7 @@ const App = () => {
     const [notificationStatus, setNotificationStatus] = useState('pending');
     const [showFeatureHighlight, setShowFeatureHighlight] = useState(false);
     const [deviceToken, setDeviceToken] = useState<string>('');
+    const [notificationSupported, setNotificationSupported] = useState(false);
 
     useEffect(() => {
         const handleOnline = () => setIsOnline(true);
@@ -25,15 +27,71 @@ const App = () => {
         };
     }, []);
 
+    useEffect(() => {
+        const isSupported = 'Notification' in window;
+        setNotificationSupported(isSupported);
+
+        if (isSupported) {
+            setNotificationStatus(Notification.permission);
+        }
+    }, []);
+
+    useEffect(() => {
+        // 알림 권한이 허용된 경우에만 메시지 핸들러 등록
+        if (notificationStatus === 'granted') {
+            const messaging = getMessaging();
+
+            // 포그라운드 메시지 핸들러 등록
+            const unsubscribe = onMessage(messaging, (payload) => {
+                console.log('Received foreground message:', payload);
+
+                // 포그라운드에서도 알림 표시
+                if (payload.notification) {
+                    new Notification(payload.notification.title ?? '-', {
+                        body: payload.notification.body ?? '-',
+                        icon: '/smartTSLogo.png',
+                    });
+                }
+            });
+
+            // 컴포넌트 언마운트 시 구독 해제
+            return () => unsubscribe();
+        }
+    }, [notificationStatus]);
+
     const requestNotification = async () => {
+        if (!notificationSupported) {
+            alert('이 브라우저는 알림을 지원하지 않습니다.');
+            return;
+        }
+
+        if (notificationStatus === 'denied') {
+            alert('브라우저 설정에서 알림 권한을 허용해주세요.');
+            return;
+        }
+
         setNotificationStatus('requesting');
         try {
             const permission = await Notification.requestPermission();
-            const token = await getFCMToken();
-            setDeviceToken(token || '');
             setNotificationStatus(permission);
+
+            if (permission === 'granted') {
+                try {
+                    const token = await getFCMToken();
+                    if (token) {
+                        setDeviceToken(token);
+                    } else {
+                        throw new Error('FCM 토큰을 받아올 수 없습니다.');
+                    }
+                } catch (fcmError) {
+                    console.error('FCM 토큰 에러:', fcmError);
+                    alert('푸시 알림 설정 중 문제가 발생했습니다. 나중에 다시 시도해주세요.');
+                }
+            }
         } catch (error) {
+            console.error('알림 권한 요청 에러:', error);
             setNotificationStatus('denied');
+            alert('알림 권한 요청 중 문제가 발생했습니다.');
         }
     };
 
@@ -52,8 +110,8 @@ const App = () => {
                         <span className="text-xs text-gray-400 ml-2">v{APP_VERSION}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Bell className="w-4 h-4" />
-                        <span className="text-sm">{notificationStatus}</span>
+                        <Bell className={`w-4 h-4 ${notificationSupported ? 'text-green-400' : 'text-red-400'}`} />
+                        <span className="text-sm">{notificationSupported ? notificationStatus : 'Not Supported'}</span>
                     </div>
                 </div>
 
@@ -106,7 +164,9 @@ const App = () => {
                     </div>
 
                     <div
-                        className="group bg-black/30 backdrop-blur p-6 rounded-lg hover:bg-black/40 transition-all duration-300 cursor-pointer"
+                        className={`group bg-black/30 backdrop-blur p-6 rounded-lg hover:bg-black/40 transition-all duration-300 ${
+                            notificationSupported ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                        }`}
                         onClick={requestNotification}
                     >
                         <div className="flex items-center gap-4">
@@ -115,7 +175,11 @@ const App = () => {
                             </div>
                             <div>
                                 <h3 className="text-xl font-semibold mb-2">Notifications</h3>
-                                <p className="text-gray-300">Stay updated in real-time</p>
+                                <p className="text-gray-300">
+                                    {notificationSupported
+                                        ? 'Stay updated in real-time'
+                                        : 'Not supported in this browser'}
+                                </p>
                             </div>
                         </div>
                     </div>

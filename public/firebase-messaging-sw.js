@@ -25,25 +25,6 @@ self.addEventListener('activate', (event) => {
     console.log('Service Worker activating.');
 });
 
-// 푸시 이벤트 추가
-// self.addEventListener('push', function (event) {
-//     console.log('Push event received:', event);
-
-//     if (!event.data) return;
-
-//     const data = event.data.json();
-//     console.log('Push data:', data);
-
-//     const notificationTitle = data.notification.title;
-//     const notificationOptions = {
-//         body: data.notification.body,
-//         icon: '/logo192.png',
-//         badge: '/logo192.png',
-//     };
-
-//     event.waitUntil(self.registration.showNotification(notificationTitle, notificationOptions));
-// });
-
 messaging.onBackgroundMessage((payload) => {
     console.log('Received background message:', payload);
 

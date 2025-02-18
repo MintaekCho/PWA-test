@@ -6,9 +6,9 @@ import { registerRoute } from 'workbox-routing';
 
 declare const self: ServiceWorkerGlobalScope;
 
-clientsClaim();
+clientsClaim(); // 서비스 워커가 즉시 제어권을 가질 수 있게함
 
-precacheAndRoute(self.__WB_MANIFEST);
+precacheAndRoute(self.__WB_MANIFEST); // 정적 자원 캐싱 (__WB_MANIFEST는 빌드 시 생성되는 정적 자원 목록이며 오프라인 동작을 가능하게 하는 핵심기능)
 
 // 싱글 페이지 앱을 위한 설정
 const fileExtensionRegexp = new RegExp('/[^/?]+\\.[^/]+$');
@@ -24,18 +24,3 @@ registerRoute(({ request, url }: { request: Request; url: URL }) => {
     }
     return true;
 }, createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html'));
-
-
-// 포그라운드 메시지 핸들러
-self.addEventListener('push', (event: PushEvent) => {
-    console.log('Received push message:', event);
-    const title = '알림 테스트';
-    const options = {
-        body: event.data?.text(),
-        icon: '/logo192.png',
-        badge: '/smartTSLogo.png',
-    };
-    event.waitUntil(
-        self.registration.showNotification(title, options)
-    );
-});

@@ -39,6 +39,7 @@ export function register(config?: Config) {
     }
 }
 
+// 서비스 워커 등록 함수
 export function registerServiceWorker() {
     navigator.serviceWorker
         .register('firebase-messaging-sw.js')
