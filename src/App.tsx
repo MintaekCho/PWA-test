@@ -61,11 +61,6 @@ const App = () => {
                             body: body,
                             icon: '/logo192.png',
                             badge: '/smartTSLogo.png',
-                            // 추가 옵션들
-                            tag: 'notification-tag', // 알림 그룹화
-                            silent: false, // 소리 허용
-                            requireInteraction: true, // 사용자가 직접 닫을 때까지 유지
-                           
                         });
                     });
                 } catch (error) {

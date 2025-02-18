@@ -71,19 +71,6 @@ messaging.onBackgroundMessage((payload) => {
         body: payload.notification.body,
         icon: '/logo192.png',
         badge: '/smartTSLogo.png',
-        // 추가 옵션들
-        vibrate: [200, 100, 200], // 진동 패턴
-        tag: 'notification-tag', // 알림 그룹화
-        renotify: true, // 같은 tag여도 다시 알림
-        silent: false, // 소리 허용
-        requireInteraction: true, // 사용자가 직접 닫을 때까지 유지
-        actions: [
-            // 알림 액션 버튼
-            {
-                action: 'open',
-                title: '열기',
-            },
-        ],
     };
 
     self.registration.showNotification(notificationTitle, notificationOptions);
