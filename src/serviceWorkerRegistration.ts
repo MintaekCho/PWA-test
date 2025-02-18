@@ -14,7 +14,7 @@ type Config = {
     onUpdate?: (registration: ServiceWorkerRegistration) => void;
 };
 
-// 서비스 워커 등록 함수
+// 서비스 워커 등록 함수 (캐싱, 오프라인 관련 서비스워커)
 export function register(config?: Config) {
     // 프로덕션 환경이고 브라우저가 서비스 워커를 지원하는 경우에만 실행
     if (process.env.NODE_ENV === 'production' && 'serviceWorker' in navigator) {
@@ -39,7 +39,7 @@ export function register(config?: Config) {
     }
 }
 
-// 서비스 워커 등록 함수
+// 서비스 워커 등록 함수 (푸시 알림 관련 서비스워커)
 export function registerServiceWorker() {
     navigator.serviceWorker
         .register('firebase-messaging-sw.js')
