@@ -1,4 +1,3 @@
-// src/components/tests/PhotoTest/index.tsx
 import React, { useState } from 'react';
 import { Image, Camera } from 'lucide-react';
 import { TestComponentProps } from '../../../types';
@@ -144,6 +143,13 @@ const PhotoTest: React.FC<PhotoTestProps> = ({ onClose, testResult, updateTestRe
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 <div className="bg-black/20 p-4 rounded-lg">
                     <h3 className="text-lg font-medium mb-4">사진 접근 테스트</h3>
+                    <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handlePhotoSelect}
+                        ref={photoInputRef}
+                        className="hidden"
+                    />
                     <button
                         onClick={openPhotoPicker}
                         className="w-full bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-lg transition-colors"

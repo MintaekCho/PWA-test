@@ -1,4 +1,3 @@
-// src/components/tests/FileIOTest/index.tsx
 import React, { useState } from 'react';
 import { TestComponentProps } from '../../../types';
 
@@ -13,6 +12,7 @@ const FileIOTest: React.FC<FileIOTestProps> = ({
   fileInputRef
 }) => {
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>): void => {
     const files = e.target.files;
@@ -23,6 +23,13 @@ const FileIOTest: React.FC<FileIOTestProps> = ({
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target && event.target.result) {
+          // If the file is an image, create a preview
+          if (file.type.startsWith('image/')) {
+            setImagePreview(event.target.result as string);
+          } else {
+            setImagePreview(null);
+          }
+
           setImageFile(file);
           updateTestResult({
             tested: true, 
@@ -117,12 +124,24 @@ const FileIOTest: React.FC<FileIOTestProps> = ({
           {imageFile && (
             <div className="mt-4">
               <div className="text-sm font-medium mb-1">업로드된 파일:</div>
-              <div className="bg-black/30 p-2 rounded text-xs">
+              <div className="bg-black/30 p-2 rounded text-xs mb-2">
                 <div>이름: {imageFile.name}</div>
                 <div>크기: {(imageFile.size / 1024).toFixed(2)} KB</div>
                 <div>타입: {imageFile.type}</div>
                 <div>최종 수정: {new Date(imageFile.lastModified).toLocaleString()}</div>
               </div>
+              
+              {/* 이미지 미리보기 추가 */}
+              {imagePreview && (
+                <div className="mt-2">
+                  <div className="text-sm font-medium mb-1">이미지 미리보기:</div>
+                  <img 
+                    src={imagePreview} 
+                    alt="업로드된 이미지" 
+                    className="max-w-full h-auto rounded-lg border border-gray-600"
+                  />
+                </div>
+              )}
             </div>
           )}
         </div>
