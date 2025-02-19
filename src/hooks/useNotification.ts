@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getFCMToken } from '../firebase'; // 기존 Firebase 서비스 import
+import { getMessaging, onMessage } from 'firebase/messaging';
 
 interface UseNotificationReturn {
     notificationSupported: boolean;
@@ -59,6 +60,38 @@ export function useNotification(): UseNotificationReturn {
             alert('알림 권한 요청 중 문제가 발생했습니다.');
         }
     };
+
+    useEffect(() => {
+        if (!notificationSupported) return;
+        
+        const messaging = getMessaging();
+        const unsubscribe = onMessage(messaging, (payload) => {
+            console.log('Received foreground message:', payload);
+            // PWA 설치 상태 확인
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+            console.log('Is PWA:', isPWA);
+
+            // 알림 권한이 허용된 경우 직접 알림 생성
+            if (Notification.permission === 'granted') {
+                try {
+                    const notification = payload.notification || {};
+                    const { title = 'Default Title', body = 'Default Body' } = notification;
+                    navigator.serviceWorker.ready.then((registration) => {
+                        registration.showNotification(title, {
+                            body: body,
+                            icon: '/logo192.png',
+                            badge: '/smartTSLogo.png',
+                        });
+                    });
+                } catch (error) {
+                    console.error('서비스워커 알림 생성 실패:', error);
+                }
+            }
+        });
+
+        return () => unsubscribe();
+    }, [notificationSupported]);
+
 
     return {
         notificationSupported,
