@@ -6,6 +6,7 @@ import { TestComponentProps } from '../../../types';
 import 'pdfjs-dist/web/pdf_viewer.css';
 
 // PDF.js 워커 설정 - 로컬 워커 사용
+// pdf 파일을 파싱하고 렌더링하는 계산적으로 무거운 작업이기 때문에 웹 워커를 사용하여 백그라운드 스레드에서 동작할 수 있도록 함
 pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
 
 // 한글 폰트 등록 (PWA에서 로컬 폰트 경로 필요)
@@ -151,6 +152,9 @@ const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSucc
     const [error, setError] = useState<string | null>(null);
     const [scale, setScale] = useState<number>(1); // pdf 스케일
 
+    const zoomIn = () => setScale((prev) => Math.min(prev + 0.2, 2.0)); // 최대 2배
+    const zoomOut = () => setScale((prev) => Math.max(prev - 0.2, 0.5)); // 최소 0.5배
+
     const documentOptions = useMemo(
         () => ({
             cMapUrl: '/cmaps/',
@@ -184,6 +188,23 @@ const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSucc
 
     return (
         <div className="w-full h-full flex flex-col overflow-auto">
+            <div className="flex justify-center space-x-4 mb-2">
+                <button
+                    onClick={zoomOut}
+                    className="bg-gray-200 p-2 rounded"
+                    disabled={scale <= 0.5}
+                >
+                    축소
+                </button>
+                <span>{(scale * 100).toFixed(0)}%</span>
+                <button
+                    onClick={zoomIn}
+                    className="bg-gray-200 p-2 rounded"
+                    disabled={scale >= 2.0}
+                >
+                    확대
+                </button>
+            </div>
             {error ? (
                 <div className="flex items-center justify-center h-full bg-white bg-opacity-90">
                     <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
@@ -202,7 +223,7 @@ const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSucc
                         <Page
                             key={`page_${index + 1}`}
                             pageNumber={index + 1}
-                            scale={0.9} // 동적 scale 적용
+                            scale={scale} // 동적 scale 적용
                         />
                     ))}
                 </Document>
