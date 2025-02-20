@@ -24,3 +24,22 @@ registerRoute(({ request, url }: { request: Request; url: URL }) => {
     }
     return true;
 }, createHandlerBoundToURL(process.env.PUBLIC_URL + '/index.html'));
+
+const CACHE_NAME = 'pdf-cache-v1';
+const urlsToCache = [
+    '/',
+    '/fonts/PretendardVariable.ttf',
+    // 필요 시 추가 리소스
+];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request).then((response) => response || fetch(event.request))
+    );
+});

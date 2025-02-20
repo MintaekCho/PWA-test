@@ -1,13 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdf } from '@react-pdf/renderer';
-import { Document as PDFDocument, Page as PDFPage, View, Text, StyleSheet, Font, PDFViewer } from '@react-pdf/renderer';
+import {
+    Document as PDFDocument,
+    Page as PDFPage,
+    View,
+    Text,
+    StyleSheet,
+    Font,
+    PDFViewer,
+} from '@react-pdf/renderer';
 import { TestComponentProps } from '../../../types';
+import 'pdfjs-dist/web/pdf_viewer.css'
 
-// PDF.js 워커 설정 - 안정적인 버전 사용
-pdfjs.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.8.69/pdf.worker.min.js`;
+// PDF.js 워커 설정 - 로컬 워커 사용
+    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
 
-// 한글 폰트 등록 (필요시)
+// 한글 폰트 등록 (PWA에서 로컬 폰트 경로 필요)
 Font.register({
     family: 'Pretendard Variable',
     src: '/fonts/PretendardVariable.ttf',
@@ -80,9 +89,6 @@ const styles = StyleSheet.create({
         textAlign: 'right',
         color: '#555',
     },
-    flexRow: {
-        flexDirection: 'row',
-    },
 });
 
 // PDF 데이터 타입 정의
@@ -111,7 +117,6 @@ const PDFTemplate = ({ data }: { data: PdfData }) => (
 
             {data.table && (
                 <View style={styles.table}>
-                    {/* 테이블 헤더 */}
                     <View style={[styles.tableRow, styles.tableRowHeader]}>
                         {data.table.headers.map((header, i) => (
                             <View
@@ -126,8 +131,6 @@ const PDFTemplate = ({ data }: { data: PdfData }) => (
                             </View>
                         ))}
                     </View>
-
-                    {/* 테이블 데이터 */}
                     {data.table.rows.map((row, i) => (
                         <View style={styles.tableRow} key={`row-${i}`}>
                             {row.map((cell, j) => (
@@ -150,13 +153,59 @@ const PDFTemplate = ({ data }: { data: PdfData }) => (
     </PDFDocument>
 );
 
+// PDF.js 뷰어 컴포넌트 (react-pdf 사용으로 간소화)
+const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSuccess: () => void }) => {
+    const [numPages, setNumPages] = useState<number | null>(null);
+    const [error, setError] = useState<string | null>(null);
+
+    const documentOptions = useMemo(
+        () => ({
+            cMapUrl: '/cmaps/',
+            cMapPacked: true,
+        }),
+        [] // 의존성 배열이 비어 있으므로 컴포넌트 생애 동안 한 번만 생성
+    );
+
+    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
+        setNumPages(numPages);
+        setError(null);
+        onRenderSuccess();
+    };
+
+    const onDocumentLoadError = (err: Error) => {
+        setError(`PDF 로드 오류: ${err.message}`);
+    };
+
+    return (
+        <div className="w-full h-full flex flex-col overflow-auto">
+            {error ? (
+                <div className="flex items-center justify-center h-full bg-white bg-opacity-90">
+                    <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded max-w-md">
+                        <p className="font-bold">렌더링 오류</p>
+                        <p>{error}</p>
+                    </div>
+                </div>
+            ) : (
+                <Document
+                    file={pdfUrl}
+                    onLoadSuccess={onDocumentLoadSuccess}
+                    onLoadError={onDocumentLoadError}
+                    options={documentOptions}
+                >
+                    {Array.from(new Array(numPages || 0), (el, index) => (
+                        <Page key={`page_${index + 1}`} pageNumber={index + 1} scale={1.5} />
+                    ))}
+                </Document>
+            )}
+        </div>
+    );
+};
+
 const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTestResult }) => {
     const [pdfBlob, setPdfBlob] = useState<Blob | null>(null);
     const [pdfUrl, setPdfUrl] = useState<string | null>(null);
-    const [numPages, setNumPages] = useState<number | null>(null);
-    const [pageNumber, setPageNumber] = useState<number>(1);
     const [loading, setLoading] = useState<boolean>(false);
-    const [pdfData, setPdfData] = useState<PdfData>({
+    const [pdfData] = useState<PdfData>({
         title: '테스트 리포트',
         subtitle: '모바일 PDF 렌더링 테스트',
         content:
@@ -171,38 +220,45 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
             ],
         },
     });
+    const [isAndroid, setIsAndroid] = useState<boolean>(false);
+    const [usePdfJs, setUsePdfJs] = useState<boolean>(false);
 
-    // PDF 생성 함수
+    // 기기 감지
+    useEffect(() => {
+        const isAndroidDevice = /Android/i.test(navigator.userAgent);
+        setIsAndroid(isAndroidDevice);
+        if (isAndroidDevice) {
+            setUsePdfJs(true); // 안드로이드에서는 기본적으로 PDF.js 사용
+        }
+    }, []);
+
+    // PDF 생성 함수 (Base64로 변환)
     const generatePdf = async () => {
         setLoading(true);
 
         try {
-            // @react-pdf/renderer로 PDF 생성
             const pdfDoc = <PDFTemplate data={pdfData} />;
             const asPdf = pdf();
             asPdf.updateContainer(pdfDoc);
-            console.log(asPdf);
             const blob = await asPdf.toBlob();
             setPdfBlob(blob);
 
-            // 이전 URL이 있다면 해제
-            if (pdfUrl) {
-                URL.revokeObjectURL(pdfUrl);
-            }
-
-            const file = new File([blob], 'document.pdf', { type: 'application/pdf' });
-            const url = URL.createObjectURL(file);
-
-            // 새 URL 생성
-            setPdfUrl(url);
-            console.log(url);
-
-            updateTestResult({
-                tested: true,
-                success: true,
-                details: 'PDF 생성 완료. 렌더링 중...',
-            });
-            setLoading(false);
+            // Blob을 Base64로 변환
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => {
+                const base64data = reader.result as string;
+                if (pdfUrl) {
+                    URL.revokeObjectURL(pdfUrl);
+                }
+                setPdfUrl(base64data); // Base64 URL로 설정
+                updateTestResult({
+                    tested: true,
+                    success: true,
+                    details: 'PDF 생성 완료. 렌더링 중...',
+                });
+                setLoading(false);
+            };
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : String(error);
             updateTestResult({
@@ -214,33 +270,27 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
         }
     };
 
-    // PDF 공유 함수 (모바일용)
+    // PDF 공유 함수
     const sharePdf = async () => {
         if (!pdfBlob) return;
 
         try {
-            // 웹 공유 API가 지원되는지 확인
             if (navigator.share && navigator.canShare) {
                 const file = new File([pdfBlob], '테스트_리포트.pdf', { type: 'application/pdf' });
-
-                // 파일 공유 가능한지 확인
                 if (navigator.canShare({ files: [file] })) {
                     await navigator.share({
                         files: [file],
                         title: pdfData.title,
                     });
-
                     updateTestResult({
                         tested: true,
                         success: true,
                         details: 'PDF 공유 성공',
                     });
                 } else {
-                    // 다운로드 대체 로직
                     downloadPdf();
                 }
             } else {
-                // 공유 API를 지원하지 않는 경우 다운로드
                 downloadPdf();
             }
         } catch (error) {
@@ -271,70 +321,15 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
         });
     };
 
-    // PDF 로드 성공 핸들러
-    const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-        console.log('success');
-        setNumPages(numPages);
-        setPageNumber(1);
+    // PdfJs 렌더링 성공 핸들러
+    const handlePdfJsRenderSuccess = () => {
         setLoading(false);
         updateTestResult({
             tested: true,
             success: true,
-            details: `PDF 렌더링 성공: ${numPages}페이지`,
+            details: 'PDF.js로 렌더링 성공',
         });
     };
-
-    // 페이지 변경 핸들러
-    const changePage = (offset: number) => {
-        if (!numPages) return;
-        const newPageNumber = pageNumber + offset;
-        if (newPageNumber >= 1 && newPageNumber <= numPages) {
-            setPageNumber(newPageNumber);
-        }
-    };
-
-    const previousPage = () => changePage(-1);
-    const nextPage = () => changePage(1);
-
-    const documentOptions = useMemo(
-        () => ({
-            cMapUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/cmaps/',
-            cMapPacked: true,
-            standardFontDataUrl: 'https://unpkg.com/pdfjs-dist@3.4.120/standard_fonts/',
-        }),
-        []
-    );
-
-    const openPdfInMobile = () => {
-        if (!pdfUrl) return;
-
-        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-        if (isMobile) {
-            // 모바일에서는 새 창에서 열기
-            window.open(pdfUrl, '_blank');
-        }
-    };
-
-    // PDF URL이 실제로 유효한지 확인
-    useEffect(() => {
-        if (pdfUrl) {
-            console.log('PDF URL:', pdfUrl);
-            console.log('PDF Blob 크기:', pdfBlob?.size, 'bytes');
-
-            // 간단한 fetch로 URL 접근 가능한지 테스트
-            fetch(pdfUrl)
-                .then((response) => {
-                    console.log('PDF URL 접근 가능:', response.ok, response.status);
-                    return response.blob();
-                })
-                .then((blob) => {
-                    console.log('PDF Blob 유효:', blob.size, 'bytes', blob.type);
-                })
-                .catch((error) => {
-                    console.error('PDF URL 접근 오류:', error);
-                });
-        }
-    }, [pdfUrl, pdfBlob]);
 
     // 인라인 미리보기 toggle
     const [useInlinePreview, setUseInlinePreview] = useState<boolean>(false);
@@ -357,6 +352,11 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                 <div className={`text-sm ${testResult.success ? 'text-green-400' : 'text-red-400'}`}>
                     {testResult.details}
                 </div>
+                {isAndroid && (
+                    <div className="mt-2 text-xs text-yellow-300">
+                        안드로이드 기기가 감지되었습니다. PDF.js 렌더링을 사용합니다.
+                    </div>
+                )}
             </div>
 
             {/* 테스트 정보 및 컨트롤 */}
@@ -400,7 +400,6 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                             )}
                         </button>
 
-                        {/* 렌더링 방식 선택 */}
                         <div className="flex items-center mt-4">
                             <input
                                 type="checkbox"
@@ -414,9 +413,24 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                             </label>
                         </div>
 
+                        {!useInlinePreview && (
+                            <div className="flex items-center mt-2">
+                                <input
+                                    type="checkbox"
+                                    id="usePdfJs"
+                                    checked={usePdfJs}
+                                    onChange={(e) => setUsePdfJs(e.target.checked)}
+                                    className="mr-2"
+                                    disabled={isAndroid}
+                                />
+                                <label htmlFor="usePdfJs" className="text-sm text-gray-300">
+                                    PDF.js 렌더러 사용 (모바일 호환성 향상)
+                                </label>
+                            </div>
+                        )}
+
                         <div className="text-sm text-gray-300">
-                            @react-pdf/renderer를 사용하여 React 컴포넌트로 PDF를 생성합니다. 렌더링은 선택한 방식으로
-                            진행됩니다.
+                            @react-pdf/renderer로 PDF를 생성하며, 렌더링은 선택한 방식으로 진행됩니다.
                         </div>
                     </div>
                 </div>
@@ -429,11 +443,7 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                         </p>
                         <p>
                             <span className="font-medium text-gray-300">렌더링:</span>{' '}
-                            {useInlinePreview ? '@react-pdf/renderer' : `react-pdf ${pdfjs.version}`}
-                        </p>
-                        <p>
-                            <span className="font-medium text-gray-300">페이지:</span>{' '}
-                            {numPages ? `${pageNumber} / ${numPages}` : '생성되지 않음'}
+                            {useInlinePreview ? '@react-pdf/renderer' : usePdfJs ? 'PDF.js 렌더러' : '브라우저 내장'}
                         </p>
                         <p>
                             <span className="font-medium text-gray-300">상태:</span>{' '}
@@ -443,7 +453,23 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                 </div>
             </div>
 
-            {pdfUrl && !useInlinePreview && (
+            {/* PDF 뷰어 영역 - PDF.js 사용 */}
+            {pdfUrl && !useInlinePreview  && (
+                <div className="mt-6 bg-white rounded-lg overflow-hidden p-2">
+                    <div className="relative w-full" style={{ height: '600px' }}>
+                        {loading ? (
+                            <div className="flex justify-center items-center h-full">
+                                <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-blue-500"></div>
+                            </div>
+                        ) : (
+                            <PdfJsViewer pdfUrl={pdfUrl} onRenderSuccess={handlePdfJsRenderSuccess} />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* PDF 뷰어 영역 - 일반 embed 사용 */}
+            {/* {pdfUrl && !useInlinePreview && !usePdfJs && (
                 <div className="mt-6 bg-white rounded-lg overflow-hidden p-2">
                     <div className="relative w-full" style={{ height: '600px' }}>
                         {loading ? (
@@ -452,19 +478,7 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                             </div>
                         ) : (
                             <>
-                                <embed
-                                    src={pdfUrl}
-                                    type="application/pdf"
-                                    className="absolute inset-0 w-full h-full"
-                                    onLoad={() => {
-                                        setLoading(false);
-                                        updateTestResult({
-                                            tested: true,
-                                            success: true,
-                                            details: 'PDF 렌더링 성공 (embed)',
-                                        });
-                                    }}
-                                />
+                                <embed src={pdfUrl} type="application/pdf" className="absolute inset-0 w-full h-full" />
                                 <div className="absolute bottom-4 left-0 right-0 flex justify-center">
                                     <div className="bg-black/50 text-white px-4 py-2 rounded-lg text-sm">
                                         브라우저 내장 PDF 뷰어로 표시됨
@@ -474,7 +488,7 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                         )}
                     </div>
                 </div>
-            )}
+            )} */}
 
             {/* 인라인 PDF 뷰어 (@react-pdf/renderer) */}
             {useInlinePreview && pdfData && (
@@ -493,24 +507,18 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
 
             {/* PDF 공유/다운로드 버튼 */}
             {pdfUrl && (
-                <div className="mt-4 grid grid-cols-2 gap-4">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <button
-                        className="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg transition-colors"
+                        className="bg-green-600 hover:bg-green-700 px-4 py-3 rounded-lg transition-colors text-white"
                         onClick={sharePdf}
                     >
                         모바일에서 공유
                     </button>
                     <button
-                        className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg transition-colors"
+                        className="bg-blue-600 hover:bg-blue-700 px-4 py-3 rounded-lg transition-colors text-white"
                         onClick={downloadPdf}
                     >
                         PDF 다운로드
-                    </button>
-                    <button
-                        className="bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-lg transition-colors text-white"
-                        onClick={openPdfInMobile}
-                    >
-                        브라우저에서 PDF 열기
                     </button>
                 </div>
             )}
@@ -518,9 +526,8 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
             {/* 안내 메시지 */}
             <div className="mt-4 p-4 bg-blue-500/20 border border-blue-500 rounded-lg">
                 <p className="text-blue-300">
-                    이 테스트는 <strong>@react-pdf/renderer를 사용하여 리액트 컴포넌트로 PDF를 생성하고</strong> 모바일
-                    브라우저에서 렌더링하는 기능을 검증합니다. 두 가지 렌더링 방식(react-pdf 또는 @react-pdf/renderer의
-                    인라인 미리보기)을 선택할 수 있습니다.
+                    이 테스트는 <strong>@react-pdf/renderer로 PDF를 생성</strong>하고, 안드로이드 PWA에서 PDF.js로
+                    렌더링하는 기능을 검증합니다.
                 </p>
             </div>
         </div>
@@ -528,3 +535,26 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
 };
 
 export default PdfTest;
+
+/* 
+ * 서비스 워커 예시 (별도 파일: service-worker.js)
+ * PWA에서 PDF 리소스 캐싱을 위해 추가하세요
+const CACHE_NAME = 'pdf-cache-v1';
+const urlsToCache = [
+    '/',
+    '/fonts/PretendardVariable.ttf',
+    // 필요 시 추가 리소스
+];
+
+self.addEventListener('install', (event) => {
+    event.waitUntil(
+        caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache))
+    );
+});
+
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        caches.match(event.request).then((response) => response || fetch(event.request))
+    );
+});
+*/
