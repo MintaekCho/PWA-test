@@ -171,10 +171,10 @@ const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSucc
 
     useEffect(() => {
         const updateScale = () => {
-            const containerWidth = window.innerWidth * 0.9; // 컨테이너 너비 (90%로 여유 둠)
-            const pdfWidth = 595; // A4 기준 너비 (포인트 단위)
+            const containerWidth = window.innerWidth; // 컨테이너 너비 (90%로 여유 둠)
+            const pdfWidth = 530; // A4 기준 너비 (포인트 단위)
             const newScale = containerWidth / pdfWidth; // 화면에 맞는 비율
-            setScale(Math.min(newScale, 1.0)); // 최대 scale 1.5로 제한
+            setScale(Math.min(newScale, 1.5)); // 최대 scale 1.5로 제한
         };
 
         updateScale(); // 초기 설정
@@ -202,8 +202,7 @@ const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSucc
                         <Page
                             key={`page_${index + 1}`}
                             pageNumber={index + 1}
-                            scale={scale} // 동적 scale 적용
-                            width={window.innerWidth * 0.9}
+                            scale={0.9} // 동적 scale 적용
                         />
                     ))}
                 </Document>
