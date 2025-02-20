@@ -305,6 +305,16 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
         []
     );
 
+    const openPdfInMobile = () => {
+        if (!pdfUrl) return;
+
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        if (isMobile) {
+            // 모바일에서는 새 창에서 열기
+            window.open(pdfUrl, '_blank');
+        }
+    };
+
     // PDF URL이 실제로 유효한지 확인
     useEffect(() => {
         if (pdfUrl) {
@@ -495,6 +505,12 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
                         onClick={downloadPdf}
                     >
                         PDF 다운로드
+                    </button>
+                    <button
+                        className="bg-indigo-600 hover:bg-indigo-700 px-4 py-3 rounded-lg transition-colors text-white"
+                        onClick={openPdfInMobile}
+                    >
+                        브라우저에서 PDF 열기
                     </button>
                 </div>
             )}
