@@ -1,20 +1,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Document, Page, pdfjs } from 'react-pdf';
 import { pdf } from '@react-pdf/renderer';
-import {
-    Document as PDFDocument,
-    Page as PDFPage,
-    View,
-    Text,
-    StyleSheet,
-    Font,
-    PDFViewer,
-} from '@react-pdf/renderer';
+import { Document as PDFDocument, Page as PDFPage, View, Text, StyleSheet, Font, PDFViewer } from '@react-pdf/renderer';
 import { TestComponentProps } from '../../../types';
-import 'pdfjs-dist/web/pdf_viewer.css'
+import 'pdfjs-dist/web/pdf_viewer.css';
 
 // PDF.js 워커 설정 - 로컬 워커 사용
-    pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
+pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.mjs';
 
 // 한글 폰트 등록 (PWA에서 로컬 폰트 경로 필요)
 Font.register({
@@ -157,6 +149,7 @@ const PDFTemplate = ({ data }: { data: PdfData }) => (
 const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSuccess: () => void }) => {
     const [numPages, setNumPages] = useState<number | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [scale, setScale] = useState<number>(1); // pdf 스케일
 
     const documentOptions = useMemo(
         () => ({
@@ -176,6 +169,19 @@ const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSucc
         setError(`PDF 로드 오류: ${err.message}`);
     };
 
+    useEffect(() => {
+        const updateScale = () => {
+            const containerWidth = window.innerWidth * 0.9; // 컨테이너 너비 (90%로 여유 둠)
+            const pdfWidth = 595; // A4 기준 너비 (포인트 단위)
+            const newScale = containerWidth / pdfWidth; // 화면에 맞는 비율
+            setScale(Math.min(newScale, 1.0)); // 최대 scale 1.5로 제한
+        };
+
+        updateScale(); // 초기 설정
+        window.addEventListener('resize', updateScale); // 창 크기 변경 시 업데이트
+        return () => window.removeEventListener('resize', updateScale); // 정리
+    }, []);
+
     return (
         <div className="w-full h-full flex flex-col overflow-auto">
             {error ? (
@@ -193,7 +199,12 @@ const PdfJsViewer = ({ pdfUrl, onRenderSuccess }: { pdfUrl: string; onRenderSucc
                     options={documentOptions}
                 >
                     {Array.from(new Array(numPages || 0), (el, index) => (
-                        <Page key={`page_${index + 1}`} pageNumber={index + 1} scale={1.5} />
+                        <Page
+                            key={`page_${index + 1}`}
+                            pageNumber={index + 1}
+                            scale={scale} // 동적 scale 적용
+                            width={window.innerWidth * 0.9}
+                        />
                     ))}
                 </Document>
             )}
@@ -454,7 +465,7 @@ const PdfTest: React.FC<TestComponentProps> = ({ onClose, testResult, updateTest
             </div>
 
             {/* PDF 뷰어 영역 - PDF.js 사용 */}
-            {pdfUrl && !useInlinePreview  && (
+            {pdfUrl && !useInlinePreview && (
                 <div className="mt-6 bg-white rounded-lg overflow-hidden p-2">
                     <div className="relative w-full" style={{ height: '600px' }}>
                         {loading ? (
